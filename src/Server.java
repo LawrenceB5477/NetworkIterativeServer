@@ -70,6 +70,30 @@ public class Server {
 
     }
 
+    private class HandleConnection implements Runnable {
+        private Socket clientSocket;
+        public HandleConnection(Socket clientSocket) {
+            this.clientSocket = clientSocket;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("New client connected: " + clientSocket.getInetAddress());
+
+            try {
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream())));
+                serverRequestProtocolRecieve(in, out);
+                out.close();
+                in.close();
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
     public void start(int port) {
         try  {
             serverSocket = new ServerSocket(port);
@@ -77,17 +101,10 @@ public class Server {
             boolean finished = false;
             while (!finished) {
                 System.out.println("Polling for a client...\n");
+
                 clientSocket = serverSocket.accept();
-                System.out.println("New client connected: " + clientSocket.getInetAddress());
+                new Thread(new HandleConnection(clientSocket)).start();
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream())));
-
-                serverRequestProtocolRecieve(in, out);
-
-                out.close();
-                in.close();
-                clientSocket.close();
             }
 
             System.out.println("Tearing down the server, goodbye...");
